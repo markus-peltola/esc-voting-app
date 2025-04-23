@@ -2,20 +2,22 @@
 	import { onMount } from 'svelte';
 	import { supabase } from '$lib/supabase';
 	import { goto } from '$app/navigation';
-	import type { Event, ParticipantListItem } from '../../types';
+	import { checkAuth } from '$lib/auth';
+	import type { Tables } from '$lib/database.types';
+	import type { QueryData } from '@supabase/supabase-js';
 
 	let userId: string | null = null;
-	let events: Event[] = $state([]);
+	let events: Tables<'events'>[] = $state([]);
 	let selectedEventId: string | null = $state(null);
   let selectedEventName: string | null = $state(null);
-	let participants: { id: string, name: string, runningOrder: number }[] = $state([]);
+	let participants: { id: string, name: string, runningOrder: number | null }[] = $state([]);
 	const votes: string[] = $state<string[]>(Array(10).fill(''));
 
 	const POINTS = [12, 10, 8, 7, 6, 5, 4, 3, 2, 1];
 
 	onMount(async () => {
-		userId = localStorage.getItem('user_id');
-		if (!userId) goto('/');
+		const userDetails = checkAuth();
+		if (userDetails) userId = userDetails.userId;
 
 		const { data: eventData, error } = await supabase
 			.from('events')
@@ -27,7 +29,7 @@
 			return;
 		}
 
-		events = eventData as Event[];
+		events = eventData;
     events.sort((a, b) => a.title.localeCompare(b.title))
 	});
 
@@ -38,22 +40,20 @@
 		const { data, error } = await supabase
 			.from('event_participants')
 			.select('participant_id, running_order, participants(country, artist, song)')
-			.eq('event_id', eventId);
+			.eq('event_id', eventId)
 
 		if (error) {
 			console.error('Error loading participants:', error);
 			return;
 		}
 
-    const safeData = data as unknown as ParticipantListItem[];
-
 		// Flatten to { id, name }
-		participants = safeData.map((p) => ({
+		participants = data.map((p) => ({
 			id: p.participant_id,
 			name: `(${p.participants.country}) ${p.participants.artist} - ${p.participants.song}`,
       runningOrder: p.running_order
 		}));
-    participants.sort((a, b) => a.runningOrder - b.runningOrder);
+    participants.sort((a, b) => (a.runningOrder || 0) - (b.runningOrder || 0));
 	}
 
   function handleSubmit(node: HTMLFormElement) {
@@ -72,7 +72,7 @@
   }
 	
 	async function submitVotes() {
-    if (!selectedEventId){
+    if (!selectedEventId) {
       console.error('You must have event selected before voting.');
       return;
     }
@@ -99,9 +99,7 @@
     // If the user has already voted on this event, delete previous votes
 		const { data } = await supabase.from('votes').select('id').eq('user_id', userId).eq('event_id', selectedEventId);
 		if (data?.length) {
-			console.log('Removing the previous votes.')
 			const previousVoteIds = data.map((vote) => vote.id as string);
-			console.log(previousVoteIds);
 			try {
 				await supabase.from('votes').delete().in('id', previousVoteIds);
 			} catch (e) {
@@ -151,7 +149,7 @@
   {#if !selectedEventId}
     <h2>Select Event</h2>
     {#each events as event}
-      <button class="event-button" onclick={() => loadParticipants(event.id)}>{event.title}</button>
+      <button class="btn btn-primary" onclick={() => loadParticipants(event.id)}>{event.title}</button>
     {/each}
   {:else}
     <h2>Submit Your Votes</h2>
@@ -167,80 +165,15 @@
           </select>
         </label>
       {/each}
-      <button type="submit">Submit Votes</button>
+      <button class="btn btn-primary" type="submit">Submit Votes</button>
     </form>
   {/if}
 </main>
 
 <style>
-	main {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		padding: 2rem;
-		max-width: 600px;
-		margin: 0 auto;
-		font-family: system-ui, sans-serif;
-	}
-
-	h1, h2 {
-		text-align: center;
-		margin-bottom: 1rem;
-	}
-
 	button {
 		padding: 0.75rem 1.25rem;
     margin-top: 1.75em;
-		border: none;
-		border-radius: 6px;
-		background-color: #2c73d2;
-		color: white;
-		font-size: 1rem;
-		cursor: pointer;
-		transition: background-color 0.2s ease-in-out;
-	}
-
-	button:hover {
-		background-color: #1b4f9c;
-	}
-
-	form {
-		width: 100%;
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-		margin-top: 1.5rem;
-	}
-
-	select {
-    width: 100%;
-		padding: 0.5rem;
-		border-radius: 6px;
-		border: 1px solid #ccc;
-		font-size: 1rem;
-	}
-
-	label {
-		display: flex;
-		flex-direction: column;
-		align-items: flex-start;
-		font-weight: bold;
-		font-size: 0.95rem;
-	}
-
-	/* Event buttons */
-	.event-button {
-		margin: 0.5rem;
-		padding: 0.75rem 1.25rem;
-		font-size: 1rem;
-		background-color: #2c73d2;
-		border: 1px solid #ccc;
-		border-radius: 6px;
-		cursor: pointer;
-		transition: background-color 0.2s ease;
-	}
-
-	.event-button:hover {
-		background-color: #1b4f9c;
+		width: fit-content;
 	}
 </style>

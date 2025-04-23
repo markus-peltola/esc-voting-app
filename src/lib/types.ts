@@ -1,41 +1,33 @@
-export interface Event {
+export type CurrentRoundDetails = {
+	round: number;
+	users: {
+		id: string;
+		username: string;
+	}[];
+	currentTurn: {
+		id: string;
+		name: string;
+	};
+};
+
+export interface FantasyEvent {
 	id: string;
 	title: string;
-	year: number;
 	active: boolean;
+	draft_open: boolean;
 	created_at: string;
 }
 
-export interface User {
-	id: string;
-	username: string;
-	created_at: string;
-}
-
-export interface Participant {
-	id: string;
-	country: string;
-	artist: string;
-	song: string;
-	created_at: string;
-}
-
-export interface EventParticipant {
+export interface FantasyPrediction {
 	id: string;
 	event_id: string;
-	participant_id: string;
-	running_oderd: number;
-	created_at: string;
-}
-
-export interface Vote {
-	id: string;
 	user_id: string;
-	event_id: string;
 	participant_id: string;
-	points: number;
+	position: number;
 	created_at: string;
 }
+
+export type FantasyParticipantListItem = Omit<ParticipantListItem, 'running_order'>;
 
 export interface ParticipantListItem {
 	participant_id: string;

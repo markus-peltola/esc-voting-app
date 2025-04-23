@@ -6,20 +6,34 @@
   onMount(() => {
     const storedUserId = localStorage.getItem('user_id');
     if (storedUserId) {
-      goto('/vote');
+      goto('/user');
     }
   });
 
 	let username = '';
 	let password = '';
 	let statusMessage = '';
-	let confirmed = false;
 	let existingUser = false;
 	let userId: string | null = null;
 
-	const NEW_USER_PASSWORD = 'letmevote'; // you can replace this with an env variable in backend
+	const NEW_USER_PASSWORD = import.meta.env.VITE_SHARED_PASSWORD;
 
-	async function handleEnter() {
+	function handleEnter(node: HTMLFormElement) {
+		async function onSubmit(e: SubmitEvent) {
+			e.preventDefault();
+			await login();
+		}
+
+		node.addEventListener('submit', onSubmit);
+
+		return {
+			destroy() {
+				node.removeEventListener('submit', onSubmit);
+			}
+		}
+	}
+
+	async function login() {
 		if (!username.trim()) return;
 
 		const { data, error } = await supabase
@@ -45,9 +59,9 @@
 
 	async function confirmChoice() {
 		if (existingUser && userId) {
-			console.log('Logging in as existing user', userId);
 			localStorage.setItem('user_id', userId);
-      goto('/vote');
+			localStorage.setItem('username', username);
+      goto('/user');
 		} else {
 			if (password !== NEW_USER_PASSWORD) {
 				statusMessage = 'Incorrect password for creating a new user.';
@@ -66,9 +80,9 @@
 				return;
 			}
 
-			console.log('Created new user:', data.id);
 			localStorage.setItem('user_id', data.id);
-      goto('/vote');
+			localStorage.setItem('username', username);
+      goto('/user');
 		}
 	}
 </script>
@@ -76,59 +90,30 @@
 <main class="container">
 	<h1>Eurovision Voting App</h1>
 
-	<form on:submit|preventDefault={handleEnter} class="form">
+	<form use:handleEnter class="form">
 		<label for="username">Enter your username:</label>
 		<input
 			id="username"
+			class="form-control"
 			type="text"
 			bind:value={username}
 			placeholder="Username"
 			required
 		/>
-		<button type="submit">Enter</button>
+		<button type="submit" class="btn btn-primary">Enter</button>
 	</form>
 
 	{#if statusMessage}
-		<p>{statusMessage}</p>
+		<p class="status-message">{statusMessage}</p>
 		{#if !existingUser}
 			<input
 				type="password"
+				class="form-control password"
 				placeholder="Shared password"
 				bind:value={password}
 			/>
 		{/if}
-		<button on:click={confirmChoice}>Confirm</button>
+		<button class="btn btn-primary" onclick={confirmChoice}>Confirm</button>
 	{/if}
 </main>
 
-<style>
-	.container {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		padding: 4rem;
-	}
-	form {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-		max-width: 320px;
-		width: 100%;
-	}
-	input,
-	button {
-		font-size: 1rem;
-		padding: 0.75rem;
-		border: 1px solid #ccc;
-		border-radius: 6px;
-	}
-	button {
-		background-color: #2c73d2;
-		color: white;
-		border: none;
-		cursor: pointer;
-	}
-	button:hover {
-		background-color: #1b4f9c;
-	}
-</style>
