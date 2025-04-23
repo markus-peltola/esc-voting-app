@@ -14,15 +14,11 @@
 }
 
 .votes-table {
-  max-width: max-content;
-  min-width: 600px;
   margin-bottom: 2rem;
   margin-top: 1rem;
 }
 
 .picks-table {
-  max-width: max-content;
-  min-width: 600px;
   margin-bottom: 3rem;
   margin-top: 1rem;
 }

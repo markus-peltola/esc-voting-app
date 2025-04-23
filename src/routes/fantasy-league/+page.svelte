@@ -44,6 +44,8 @@
 
 		activeFantasyEvent = event;
 
+		if (activeFantasyEvent.draft_open) draftAvailable = true;
+
 		// Check if user is already registered
 		const { data: regData } = await supabase
 			.from('fantasy_users')
@@ -61,7 +63,6 @@
 			// If draft is open, load prediction form
 			if (activeFantasyEvent.draft_open) {
 				availableParticipants = await getAvailableDraftParticipants(activeFantasyEvent.id);
-				draftAvailable = true;
 			}
 		}
 	});
@@ -218,18 +219,26 @@
 
 		{#if isRegistered}
 			<p>✅ You are registered for this fantasy league.</p>
-			<h3>Draft details</h3>
-			<ul>
-				<li>Participants: {currentRoundDetails?.users.map(u => u.username).join(', ')}</li>
-				<li>Round: {currentRoundDetails?.round.toString()}</li>
-				<li>Current turn: {currentRoundDetails?.currentTurn.name}</li>
-			</ul>
+			{#if draftAvailable}
+				<h3>Draft details</h3>
+				<ul>
+					<li>Participants: {currentRoundDetails?.users.map(u => u.username).join(', ')}</li>
+					<li>Round: {currentRoundDetails?.round.toString()}</li>
+					<li>Current turn: {currentRoundDetails?.currentTurn.name}</li>
+				</ul>
+			{:else}
+				<p>Please wait for the draft to open.</p>
+			{/if}
 		{:else}
-			<p>You are not yet registered to this fantasy league. Press the button below to register.</p>
-			<button onclick={registerForFantasy}>Register</button>
+			{#if draftAvailable}
+				<p>Current Fantasy League draft is already open. You can not register to it anymore.</p>
+			{:else}
+				<p>You are not yet registered to this fantasy league. Press the button below to register.</p>
+				<button class="btn btn-primary" onclick={registerForFantasy}>Register</button>
+			{/if}
 		{/if}
 
-		{#if draftAvailable}
+		{#if isRegistered && draftAvailable}
 			<h3>Draft your artist</h3>
 			{#if currentRoundDetails?.currentTurn.id == userId}
 				<form use:handleSubmit>
@@ -255,26 +264,28 @@
 			<h3>Current picks</h3>
 			{#each usersWithPredictions as user}
 				<h4>{user.name}</h4>
-				<table class="table table-sm table-bordered picks-table">
-					<thead>
-						<tr>
-							<th scope="col">Country</th>
-							<th scope="col">Artist</th>
-							<th scope="col">Song</th>
-							<th scope="col">Pos</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each currentPredictions[user.id] as prediction}
+				<div class="table-responsive">
+					<table class="table table-sm table-bordered picks-table">
+						<thead>
 							<tr>
-								<td>{prediction.participant.country}</td>
-								<td>{prediction.participant.artist}</td>
-								<td>{prediction.participant.song}</td>
-								<td>{prediction.position}</td>
+								<th scope="col">Country</th>
+								<th scope="col">Artist</th>
+								<th scope="col">Song</th>
+								<th scope="col">Pos</th>
 							</tr>
-						{/each}
-					</tbody>
-				</table>
+						</thead>
+						<tbody>
+							{#each currentPredictions[user.id] as prediction}
+								<tr>
+									<td>{prediction.participant.country}</td>
+									<td>{prediction.participant.artist}</td>
+									<td>{prediction.participant.song}</td>
+									<td>{prediction.position}</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
 			{/each}
 		{/if}
 	{/if}

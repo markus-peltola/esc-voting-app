@@ -55,7 +55,7 @@
 	{:else}
 		{#each Object.entries(groupedVotes) as [eventTitle, votes]}
 			<h2>{eventTitle}</h2>
-			<div class="votes-table">
+			<div class="votes-table table-responsive">
 				<table class="table table-striped table-bordered">
 					<thead>
 						<tr>
