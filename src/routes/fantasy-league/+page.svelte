@@ -20,7 +20,7 @@
 	let availableParticipants = $state<AvailableParticipants>([]);
 	let selectedPick = $state<string>('');
 	let position = $state<number>(0);
-	let usersWithPredictions: { id: string, name: string }[] = [];
+	let usersWithPredictions = $state<{ id: string, name: string }[]>([]);
 	let currentPredictions = $state<Record<string, CurrentPicks>>({});
 	let currentRoundDetails = $state<CurrentRoundDetails>();
 
@@ -226,8 +226,6 @@
 					<li>Round: {currentRoundDetails?.round.toString()}</li>
 					<li>Current turn: {currentRoundDetails?.currentTurn.name}</li>
 				</ul>
-			{:else}
-				<p>Please wait for the draft to open.</p>
 			{/if}
 		{:else}
 			{#if draftAvailable}
