@@ -1,6 +1,30 @@
 import type { QueryData } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 
+export type CurrentRoundDetails = {
+	round: number;
+	users: {
+		id: string;
+		username: string;
+	}[];
+	currentTurn: {
+		id: string;
+		name: string;
+	};
+};
+
+export type FantasyResults = Record<string, Record<string, FantasyPoints>>;
+type FantasyPoints = {
+	finalPosition: number | string;
+	finalPoints: number;
+	totalPoints: number;
+};
+
+export const currentPicksQuery = supabase
+	.from('fantasy_predictions')
+	.select('event_id, user_id, position, participant:participant_id(id, country, artist, song)');
+export type CurrentPicks = QueryData<typeof currentPicksQuery>;
+
 const availableParticipantsQuery = supabase
 	.from('fantasy_event_participants')
 	.select('event_id, participant:participant_id(id, country, artist, song)');
@@ -118,4 +142,58 @@ export async function nextTurn(eventId: string) {
 		// Update the turn information
 		await supabase.from('fantasy_events').update({ current_turn: nextTurnIndex }).eq('id', eventId);
 	}
+}
+
+export async function getFantasyResults(
+	eventId: string,
+	predictions: Record<string, CurrentPicks>
+): Promise<FantasyResults> {
+	// Create the return Record
+	const results: FantasyResults = {};
+
+	// Load the final results
+	const { data: finalResults } = await supabase
+		.from('fantasy_results')
+		.select('*')
+		.eq('event_id', eventId);
+
+	if (!finalResults?.length) return results;
+
+	const userIds = Object.keys(predictions);
+
+	// Build the results for every user
+	for (const userId of userIds) {
+		results[userId] = {};
+		const userPredictions = predictions[userId];
+		for (const userPrediction of userPredictions) {
+			// Get the result for current user prediction
+			const currentResult = finalResults.find(
+				(r) => r.participant_id === userPrediction.participant.id
+			);
+			// If no result was found, continue to next
+			if (!currentResult) continue;
+
+			// Position 0 means the participant did not qualify to the final
+			const finalPosition = currentResult.position === 0 ? 'DNQ' : currentResult.position;
+
+			// If the final position is DNQ, all the points are 0
+			let finalPoints = 0;
+			let totalPoints = 0;
+
+			// If the participant qualified to the final, calculate the real points
+			if (typeof finalPosition === 'number') {
+				finalPoints = currentResult.points || 0;
+				const predictionOffset = Math.abs(finalPosition - userPrediction.position);
+				totalPoints = finalPoints + Math.max(50 - predictionOffset * 10, 0);
+			}
+			// Add the results to the result Record
+			results[userId][userPrediction.participant.id] = {
+				finalPosition,
+				finalPoints,
+				totalPoints
+			};
+		}
+	}
+
+	return results;
 }

@@ -1,38 +1,11 @@
-# sv
+# Eurovision Song Contest Voting App
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+This is a quick and messy training project for learning Svelte made with "vibe coding". So in no way is it built with best practices in mind.
 
-## Creating a project
+Project's goal was to do a simple tool for me and my friends to have a playful fantasy league and our own voting for the ESC.
 
-If you're seeing this, you've probably already done this step. Congrats!
+I went with ease-of-use in mind and thus scrapped authentication altogether. The app currently fulfills it's purpose for me so it's considered done for now.
 
-```bash
-# create a new project in the current directory
-npx sv create
+## Future
 
-# create a new project in my-app
-npx sv create my-app
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```bash
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
-
-```bash
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+If at some point I want to learn more Svelte, I will probably clean this project up and maybe add some more fetures. Before that, do not judge too harshly the quality of the project ;)

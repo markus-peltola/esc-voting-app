@@ -4,7 +4,6 @@
 	import { goto } from '$app/navigation';
 	import { checkAuth } from '$lib/auth';
 	import type { Tables } from '$lib/database.types';
-	import type { QueryData } from '@supabase/supabase-js';
 
 	let userId: string | null = null;
 	let events: Tables<'events'>[] = $state([]);
@@ -12,6 +11,7 @@
   let selectedEventName: string | null = $state(null);
 	let participants: { id: string, name: string, runningOrder: number | null }[] = $state([]);
 	const votes: string[] = $state<string[]>(Array(10).fill(''));
+  let isFormValid = $derived(votes.every((v) => v !== ''));
 
 	const POINTS = [12, 10, 8, 7, 6, 5, 4, 3, 2, 1];
 
@@ -123,22 +123,12 @@
 			goto('/your-votes');
 		}
 	}
+  
+  function availableOptions(index: number) {
+    return participants.filter((participant) => !votes.includes(participant.id) || votes[index] === participant.id);
+  }
 
   function handleVoteChange(index: number, selectedParticipantId: string) {
-    const selectedParticipant = participants.find((p) => p.id === selectedParticipantId);
-    if (!selectedParticipant) return;
-
-    // Remove that country's previous selection (if it existst)
-    for (let i = 0; i < votes.length; i++) {
-      if (i !== index) {
-        const selected = participants.find((p) => p.id === votes[i]);
-        if (selected?.name === selectedParticipant.name) {
-          votes[i] = '';
-        }
-      }
-    }
-
-    // Apply new selection
     votes[index] = selectedParticipantId;
   }
 </script>
@@ -159,13 +149,13 @@
           {point} points:
           <select value={votes[i]} onchange={(e) => handleVoteChange(i, (e.target as HTMLSelectElement).value)}>
             <option value="" disabled selected>Select song</option>
-            {#each participants as p}
+            {#each availableOptions(i) as p}
               <option value={p.id} selected={votes[i] === p.id}>{p.name}</option>
             {/each}
           </select>
         </label>
       {/each}
-      <button class="btn btn-primary" type="submit">Submit Votes</button>
+      <button class="btn btn-primary" type="submit" disabled={!isFormValid}>Submit Votes</button>
     </form>
   {/if}
 </main>

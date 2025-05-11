@@ -3,6 +3,7 @@
 	import { checkAuth } from "$lib/auth";
 	import { supabase } from "$lib/supabase";
 	import type { QueryData } from "@supabase/supabase-js";
+	import { onMount } from "svelte";
 
 	let userId: string;
 	const votesWithParticipantsQuery = supabase
@@ -12,7 +13,7 @@
 
 	let groupedVotes = $state<Record<string, VotesWithParticipant>>({});
 
-	$effect(() => {
+	onMount(() => {
 		(async () => {
 			const userDetails = checkAuth();
 			if (userDetails) userId = userDetails.userId;

@@ -9,3 +9,7 @@ export function checkAuth(redirectTo: string = '/') {
 	}
 	return { userId, username };
 }
+
+export function isAdmin(userId: string | null) {
+	return userId === import.meta.env.VITE_ADMIN_USER;
+}

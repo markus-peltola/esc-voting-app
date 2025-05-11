@@ -218,6 +218,7 @@ export type Database = {
 					event_id: string;
 					id: string;
 					participant_id: string;
+					points: number;
 					position: number;
 				};
 				Insert: {
@@ -225,6 +226,7 @@ export type Database = {
 					event_id: string;
 					id?: string;
 					participant_id: string;
+					points: number;
 					position: number;
 				};
 				Update: {
@@ -232,6 +234,7 @@ export type Database = {
 					event_id?: string;
 					id?: string;
 					participant_id?: string;
+					points?: number;
 					position?: number;
 				};
 				Relationships: [

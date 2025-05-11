@@ -3,15 +3,9 @@
 	import { goto } from '$app/navigation';
 	import { checkAuth } from '$lib/auth';
 	import { supabase } from '$lib/supabase';
-	import { getAvailableDraftParticipants, getCurrentRoundDetails, nextTurn, type AvailableParticipants } from '$lib/fantasy';
+	import { getAvailableDraftParticipants, getCurrentRoundDetails, nextTurn, type AvailableParticipants, type CurrentPicks, type CurrentRoundDetails } from '$lib/fantasy';
 	import type { Tables } from '$lib/database.types';
 	import type { QueryData } from '@supabase/supabase-js';
-	import type { CurrentRoundDetails } from '$lib/types';
-
-	const currentPicksQuery = supabase
-			.from('fantasy_predictions')
-			.select('event_id, user_id, position, participant:participant_id(country, artist, song)')
-	type CurrentPicks = QueryData<typeof currentPicksQuery>;
 
 	let userId = $state<string | null>(null);
 	let activeFantasyEvent = $state<Tables<'fantasy_events'> | null>(null);
