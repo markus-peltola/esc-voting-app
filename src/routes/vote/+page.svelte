@@ -1,169 +1,97 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { supabase } from '$lib/supabase';
 	import { goto } from '$app/navigation';
-	import { checkAuth } from '$lib/auth';
-	import type { Tables } from '$lib/database.types';
+	import { authStore } from '$lib/stores/auth.svelte';
+	import type { PageData } from './$types';
 
-	let userId: string | null = null;
-	let events: Tables<'events'>[] = $state([]);
-	let selectedEventId: string | null = $state(null);
-  let selectedEventName: string | null = $state(null);
-	let participants: { id: string, name: string, runningOrder: number | null }[] = $state([]);
-	const votes: string[] = $state<string[]>(Array(10).fill(''));
-  let isFormValid = $derived(votes.every((v) => v !== ''));
+	let { data }: { data: PageData } = $props();
 
-	const POINTS = [12, 10, 8, 7, 6, 5, 4, 3, 2, 1];
-
-	onMount(async () => {
-		const userDetails = checkAuth();
-		if (userDetails) userId = userDetails.userId;
-
-		const { data: eventData, error } = await supabase
-			.from('events')
-			.select('*')
-			.eq('active', true);
-
-		if (error) {
-			console.error('Error loading events:', error);
-			return;
-		}
-
-		events = eventData;
-    events.sort((a, b) => a.title.localeCompare(b.title))
-	});
-
-	async function loadParticipants(eventId: string) {
-		selectedEventId = eventId;
-    const selectedEvent = events.find((e) => e.id === eventId);
-    selectedEventName = `${selectedEvent?.title}  (${selectedEvent?.year})`;
-		const { data, error } = await supabase
-			.from('event_participants')
-			.select('participant_id, running_order, participants(country, artist, song)')
-			.eq('event_id', eventId)
-
-		if (error) {
-			console.error('Error loading participants:', error);
-			return;
-		}
-
-		// Flatten to { id, name }
-		participants = data.map((p) => ({
-			id: p.participant_id,
-			name: `(${p.participants.country}) ${p.participants.artist} - ${p.participants.song}`,
-      runningOrder: p.running_order
-		}));
-    participants.sort((a, b) => (a.runningOrder || 0) - (b.runningOrder || 0));
+	async function handleLogout() {
+		await data.supabase.auth.signOut();
+		goto('/login');
 	}
-
-  function handleSubmit(node: HTMLFormElement) {
-    async function onSubmit(e: SubmitEvent) {
-      e.preventDefault();
-      await submitVotes();
-    }
-
-    node.addEventListener('submit', onSubmit);
-
-    return {
-      destroy() {
-        node.removeEventListener('submit', onSubmit);
-      }
-    }
-  }
-	
-	async function submitVotes() {
-    if (!selectedEventId) {
-      console.error('You must have event selected before voting.');
-      return;
-    }
-    if (!userId) {
-      console.error('You must have logged in before voting.');
-      return;
-    }
-    if (votes.some((vote) => !vote)) {
-      alert('You must vote for 10 songs.');
-      return;
-    }
-
-    // Check that no song gets double votes
-    const selectedSongs = votes.map((participantId) => {
-      const participant = participants.find((p) => p.id === participantId);
-      return participant?.name
-    });
-    const uniqueSongs = new Set(selectedSongs);
-    if (uniqueSongs.size !== selectedSongs.length) {
-      alert('You cannot give points to the same song more than once.');
-      return;
-    }
-
-    // If the user has already voted on this event, delete previous votes
-		const { data } = await supabase.from('votes').select('id').eq('user_id', userId).eq('event_id', selectedEventId);
-		if (data?.length) {
-			const previousVoteIds = data.map((vote) => vote.id as string);
-			try {
-				await supabase.from('votes').delete().in('id', previousVoteIds);
-			} catch (e) {
-				console.error('User had previous votes on this event and deletion of those votes failed.');
-				return;
-			}
-		}
-
-		const payload = votes.map((participantId, index) => ({
-			user_id: userId,
-			event_id: selectedEventId,
-			participant_id: participantId,
-			points: POINTS[index]
-		}));
-
-		const { error } = await supabase.from('votes').insert(payload);
-		if (error) {
-			console.error('Error submitting votes:', error);
-		} else {
-			alert('Votes submitted!');
-			goto('/your-votes');
-		}
-	}
-  
-  function availableOptions(index: number) {
-    return participants.filter((participant) => !votes.includes(participant.id) || votes[index] === participant.id);
-  }
-
-  function handleVoteChange(index: number, selectedParticipantId: string) {
-    votes[index] = selectedParticipantId;
-  }
 </script>
 
-<main class=container>
-  <h1>Vote for {selectedEventName || "Eurovision"}</h1>
+<div class="min-h-screen gradient-eurovision flex items-center justify-center px-4">
+	<div class="w-full max-w-2xl">
+		<!-- Success Card -->
+		<div class="card-eurovision p-8 text-center animate-slide-up">
+			<!-- Success Icon -->
+			<div class="mb-6">
+				<div class="w-20 h-20 bg-success-500 rounded-full flex items-center justify-center mx-auto">
+					<svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+					</svg>
+				</div>
+			</div>
 
-  {#if !selectedEventId}
-    <h2>Select Event</h2>
-    {#each events as event}
-      <button class="btn btn-primary" onclick={() => loadParticipants(event.id)}>{event.title}</button>
-    {/each}
-  {:else}
-    <h2>Submit Your Votes</h2>
-    <form use:handleSubmit>
-      {#each POINTS as point, i}
-        <label>
-          {point} points:
-          <select value={votes[i]} onchange={(e) => handleVoteChange(i, (e.target as HTMLSelectElement).value)}>
-            <option value="" disabled selected>Select song</option>
-            {#each availableOptions(i) as p}
-              <option value={p.id} selected={votes[i] === p.id}>{p.name}</option>
-            {/each}
-          </select>
-        </label>
-      {/each}
-      <button class="btn btn-primary" type="submit" disabled={!isFormValid}>Submit Votes</button>
-    </form>
-  {/if}
-</main>
+			<!-- Welcome Message -->
+			<h1 class="text-4xl font-bold bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent mb-4">
+				🎉 Authentication Works!
+			</h1>
 
-<style>
-	button {
-		padding: 0.75rem 1.25rem;
-    margin-top: 1.75em;
-		width: fit-content;
-	}
-</style>
+			<div class="mb-8">
+				<p class="text-xl text-gray-700 mb-2">
+					Welcome, <span class="font-bold text-primary-600">{authStore.username || 'User'}</span>!
+				</p>
+				<p class="text-gray-600">
+					You're successfully logged in with Supabase Auth 🚀
+				</p>
+			</div>
+
+			<!-- Status Info -->
+			<div class="bg-primary-50 border-2 border-primary-200 rounded-lg p-6 mb-8">
+				<h2 class="text-lg font-semibold text-primary-800 mb-3">
+					🏗️ Rebuild in Progress
+				</h2>
+				<div class="text-left text-sm text-primary-700 space-y-2">
+					<div class="flex items-start">
+						<span class="text-success-600 mr-2">✅</span>
+						<span>Tailwind CSS v4 with Eurovision theme</span>
+					</div>
+					<div class="flex items-start">
+						<span class="text-success-600 mr-2">✅</span>
+						<span>New database schema (8 refactored tables)</span>
+					</div>
+					<div class="flex items-start">
+						<span class="text-success-600 mr-2">✅</span>
+						<span>Supabase Auth with email/password</span>
+					</div>
+					<div class="flex items-start">
+						<span class="text-success-600 mr-2">✅</span>
+						<span>Core logic preserved (voting, fantasy, results)</span>
+					</div>
+					<div class="flex items-start">
+						<span class="text-accent-500 mr-2">🔨</span>
+						<span class="font-semibold">Next: Rebuild voting & fantasy pages</span>
+					</div>
+				</div>
+			</div>
+
+			<!-- Your Info -->
+			<div class="bg-gray-50 rounded-lg p-4 mb-6 text-left">
+				<h3 class="font-semibold text-gray-700 mb-2">Your Account:</h3>
+				<div class="text-sm text-gray-600 space-y-1">
+					<p><strong>Email:</strong> {data.session?.user.email}</p>
+					<p><strong>Username:</strong> {authStore.username}</p>
+					<p><strong>User ID:</strong> <code class="text-xs bg-gray-200 px-1 py-0.5 rounded">{data.session?.user.id}</code></p>
+					{#if authStore.isAdmin}
+						<p class="text-accent-600 font-semibold">👑 Admin</p>
+					{/if}
+				</div>
+			</div>
+
+			<!-- Logout Button -->
+			<button
+				onclick={handleLogout}
+				class="btn-primary"
+			>
+				Sign Out
+			</button>
+		</div>
+
+		<!-- Footer Note -->
+		<p class="text-center mt-6 text-white text-sm drop-shadow-md">
+			🎵 Ready to rebuild the voting and fantasy pages!
+		</p>
+	</div>
+</div>

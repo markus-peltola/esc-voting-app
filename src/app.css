@@ -8,7 +8,7 @@
   --color-primary-200: #bfdbfe;
   --color-primary-300: #93c5fd;
   --color-primary-400: #60a5fa;
-  --color-primary-500: #3b82f6; /* Eurovision Blue */
+  --color-primary-500: #3b82f6;
   --color-primary-600: #2563eb;
   --color-primary-700: #1d4ed8;
   --color-primary-800: #1e40af;
@@ -19,7 +19,7 @@
   --color-accent-200: #fde68a;
   --color-accent-300: #fcd34d;
   --color-accent-400: #fbbf24;
-  --color-accent-500: #f59e0b; /* Gold */
+  --color-accent-500: #f59e0b;
   --color-accent-600: #d97706;
   --color-accent-700: #b45309;
   --color-accent-800: #92400e;
@@ -28,67 +28,17 @@
   --color-success-500: #10b981;
   --color-success-600: #059669;
 
+  --color-danger-50: #fef2f2;
+  --color-danger-200: #fecaca;
   --color-danger-500: #ef4444;
   --color-danger-600: #dc2626;
+  --color-danger-700: #b91c1c;
 
   --color-purple-500: #a855f7;
   --color-purple-600: #9333ea;
 
   --color-pink-500: #ec4899;
   --color-pink-600: #db2777;
-
-  /* Neutral colors */
-  --color-gray-50: #f9fafb;
-  --color-gray-100: #f3f4f6;
-  --color-gray-200: #e5e7eb;
-  --color-gray-300: #d1d5db;
-  --color-gray-400: #9ca3af;
-  --color-gray-500: #6b7280;
-  --color-gray-600: #4b5563;
-  --color-gray-700: #374151;
-  --color-gray-800: #1f2937;
-  --color-gray-900: #111827;
-
-  /* Typography */
-  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
-
-  /* Spacing scale */
-  --spacing-xs: 0.5rem;
-  --spacing-sm: 0.75rem;
-  --spacing-md: 1rem;
-  --spacing-lg: 1.5rem;
-  --spacing-xl: 2rem;
-  --spacing-2xl: 3rem;
-  --spacing-3xl: 4rem;
-
-  /* Border radius */
-  --radius-sm: 0.25rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
-  --radius-full: 9999px;
-
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-
-  /* Transitions */
-  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Base styles */
-* {
-  @apply border-gray-200;
-}
-
-body {
-  @apply bg-gray-50 text-gray-900 antialiased;
-  font-family: var(--font-sans);
 }
 
 /* Custom animations for Eurovision flair */
@@ -153,67 +103,90 @@ body {
 
 /* Card with Eurovision flair */
 .card-eurovision {
-  @apply bg-white rounded-xl shadow-lg border-2 border-transparent;
-  @apply hover:border-primary-300 transition-all duration-300;
-  @apply hover:shadow-xl hover:scale-[1.02];
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  border: 2px solid transparent;
+  transition: all 0.3s;
 }
 
-/* Button base styles (will be enhanced with components) */
+.card-eurovision:hover {
+  border-color: #93c5fd;
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+  transform: scale(1.02);
+}
+
+/* Button styles */
 .btn-primary {
-  @apply bg-primary-500 hover:bg-primary-600 text-white font-semibold;
-  @apply px-6 py-3 rounded-lg shadow-md;
-  @apply transition-all duration-200;
-  @apply hover:shadow-lg hover:scale-105;
-  @apply active:scale-95;
+  background-color: #3b82f6;
+  color: white;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  transition: all 0.2s;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background-color: #2563eb;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  transform: scale(1.05);
+}
+
+.btn-primary:active {
+  transform: scale(0.95);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .btn-accent {
-  @apply bg-gradient-to-r from-accent-500 to-accent-600;
-  @apply text-white font-bold px-6 py-3 rounded-lg shadow-lg;
-  @apply hover:from-accent-600 hover:to-accent-700;
-  @apply transition-all duration-200 hover:scale-105 active:scale-95;
+  background: linear-gradient(to right, #f59e0b, #d97706);
+  color: white;
+  font-weight: 700;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  transition: all 0.2s;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-accent:hover {
+  background: linear-gradient(to right, #d97706, #b45309);
+  transform: scale(1.05);
+}
+
+.btn-accent:active {
+  transform: scale(0.95);
+}
+
+.btn-accent:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Flag emoji styling */
 .flag-emoji {
-  @apply text-4xl inline-block;
+  font-size: 2.25rem;
+  display: inline-block;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 }
 
 .flag-emoji-large {
-  @apply text-6xl inline-block;
+  font-size: 4rem;
+  display: inline-block;
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
 }
 
 /* Loading skeleton */
 .skeleton {
-  @apply bg-gray-200 rounded animate-pulse;
   background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
   background-size: 2000px 100%;
   animation: shimmer 2s infinite linear;
-}
-
-/* Focus styles for accessibility */
-*:focus-visible {
-  @apply outline-none ring-2 ring-primary-500 ring-offset-2;
-}
-
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-::-webkit-scrollbar-track {
-  @apply bg-gray-100;
-}
-
-::-webkit-scrollbar-thumb {
-  @apply bg-gray-300 rounded-full;
-  @apply hover:bg-gray-400;
-}
-
-/* Responsive container */
-.container-eurovision {
-  @apply w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  border-radius: 0.25rem;
 }

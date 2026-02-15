@@ -23,8 +23,27 @@ const supabase: Handle = async ({ event, resolve }) => {
 	);
 
 	/**
-	 * Get the session from Supabase and make it available throughout the app
+	 * IMPORTANT: Use getUser() instead of getSession() for security
+	 * getUser() authenticates with the Supabase server, ensuring the session is valid
+	 * getSession() just reads from cookies which could be tampered with
 	 */
+	const {
+		data: { user },
+		error
+	} = await event.locals.supabase.auth.getUser();
+
+	if (error) {
+		// Invalid session - clear it
+		event.locals.session = null;
+		event.locals.profile = null;
+		return resolve(event, {
+			filterSerializedResponseHeaders(name) {
+				return name === 'content-range' || name === 'x-supabase-api-version';
+			}
+		});
+	}
+
+	// Get the session for the authenticated user
 	const {
 		data: { session }
 	} = await event.locals.supabase.auth.getSession();
@@ -32,13 +51,13 @@ const supabase: Handle = async ({ event, resolve }) => {
 	event.locals.session = session;
 
 	/**
-	 * Get the user profile if logged in
+	 * Get the user profile if authenticated
 	 */
-	if (session) {
+	if (user) {
 		const { data: profile } = await event.locals.supabase
 			.from('profiles')
 			.select('*')
-			.eq('id', session.user.id)
+			.eq('id', user.id)
 			.single();
 
 		event.locals.profile = profile;

@@ -4,8 +4,9 @@
 	import { invalidate } from '$app/navigation';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import type { LayoutData } from './$types';
+	import type { Snippet } from 'svelte';
 
-	let { data }: { data: LayoutData } = $props();
+	let { data, children }: { data: LayoutData; children: Snippet } = $props();
 
 	// Sync auth store with page data
 	$effect(() => {
@@ -24,5 +25,5 @@
 </script>
 
 <div class="min-h-screen bg-gray-50">
-	<slot />
+	{@render children()}
 </div>
