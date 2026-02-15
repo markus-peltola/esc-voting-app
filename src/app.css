@@ -1,77 +1,219 @@
-.container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 4rem;
-  font-family: system-ui, sans-serif;
+@import "tailwindcss";
+
+/* Eurovision-themed Design System */
+@theme {
+  /* Colors - Bold & Colorful Eurovision Theme */
+  --color-primary-50: #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-200: #bfdbfe;
+  --color-primary-300: #93c5fd;
+  --color-primary-400: #60a5fa;
+  --color-primary-500: #3b82f6; /* Eurovision Blue */
+  --color-primary-600: #2563eb;
+  --color-primary-700: #1d4ed8;
+  --color-primary-800: #1e40af;
+  --color-primary-900: #1e3a8a;
+
+  --color-accent-50: #fffbeb;
+  --color-accent-100: #fef3c7;
+  --color-accent-200: #fde68a;
+  --color-accent-300: #fcd34d;
+  --color-accent-400: #fbbf24;
+  --color-accent-500: #f59e0b; /* Gold */
+  --color-accent-600: #d97706;
+  --color-accent-700: #b45309;
+  --color-accent-800: #92400e;
+  --color-accent-900: #78350f;
+
+  --color-success-500: #10b981;
+  --color-success-600: #059669;
+
+  --color-danger-500: #ef4444;
+  --color-danger-600: #dc2626;
+
+  --color-purple-500: #a855f7;
+  --color-purple-600: #9333ea;
+
+  --color-pink-500: #ec4899;
+  --color-pink-600: #db2777;
+
+  /* Neutral colors */
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+
+  /* Typography */
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+
+  /* Spacing scale */
+  --spacing-xs: 0.5rem;
+  --spacing-sm: 0.75rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+  --spacing-3xl: 4rem;
+
+  /* Border radius */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+  /* Transitions */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.menu {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  margin-top: 2rem;
+/* Base styles */
+* {
+  @apply border-gray-200;
 }
 
-.votes-table {
-  margin-bottom: 2rem;
-  margin-top: 1rem;
+body {
+  @apply bg-gray-50 text-gray-900 antialiased;
+  font-family: var(--font-sans);
 }
 
-.picks-table {
-  margin-bottom: 3rem;
-  margin-top: 1rem;
+/* Custom animations for Eurovision flair */
+@keyframes bounce-subtle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
 }
 
-.back-btn {
-  margin: 1rem;
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 20px 4px rgba(59, 130, 246, 0.2);
+  }
 }
 
-.status-message {
-  padding-top: 1rem;
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.password {
-  margin-bottom: 30px;
-  max-width: 250px;
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
 }
 
-h1, h2 {
-  text-align: center;
-  margin-bottom: 1rem;
+/* Utility classes */
+.animate-bounce-subtle {
+  animation: bounce-subtle 2s ease-in-out infinite;
 }
 
-h3 {
-  padding: 1rem;
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
 }
 
-h4 {
-  text-align: left;
-  padding: 1rem;
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
 }
 
-form {
-  width: 100%;
-  max-width: fit-content;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  margin-top: 1.5rem;
+.gradient-eurovision {
+  background: linear-gradient(135deg, #3b82f6 0%, #a855f7 50%, #ec4899 100%);
 }
 
-select {
-  width: 100%;
-  padding: 0.5rem;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  font-size: 1rem;
-  margin-top: 0.4rem;
+.gradient-gold {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
 }
 
-label {
-  display: inline-block;
-  flex-direction: column;
-  align-items: flex-start;
-  font-weight: bold;
-  font-size: 0.95rem;
+/* Card with Eurovision flair */
+.card-eurovision {
+  @apply bg-white rounded-xl shadow-lg border-2 border-transparent;
+  @apply hover:border-primary-300 transition-all duration-300;
+  @apply hover:shadow-xl hover:scale-[1.02];
+}
+
+/* Button base styles (will be enhanced with components) */
+.btn-primary {
+  @apply bg-primary-500 hover:bg-primary-600 text-white font-semibold;
+  @apply px-6 py-3 rounded-lg shadow-md;
+  @apply transition-all duration-200;
+  @apply hover:shadow-lg hover:scale-105;
+  @apply active:scale-95;
+}
+
+.btn-accent {
+  @apply bg-gradient-to-r from-accent-500 to-accent-600;
+  @apply text-white font-bold px-6 py-3 rounded-lg shadow-lg;
+  @apply hover:from-accent-600 hover:to-accent-700;
+  @apply transition-all duration-200 hover:scale-105 active:scale-95;
+}
+
+/* Flag emoji styling */
+.flag-emoji {
+  @apply text-4xl inline-block;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.flag-emoji-large {
+  @apply text-6xl inline-block;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
+}
+
+/* Loading skeleton */
+.skeleton {
+  @apply bg-gray-200 rounded animate-pulse;
+  background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+  background-size: 2000px 100%;
+  animation: shimmer 2s infinite linear;
+}
+
+/* Focus styles for accessibility */
+*:focus-visible {
+  @apply outline-none ring-2 ring-primary-500 ring-offset-2;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded-full;
+  @apply hover:bg-gray-400;
+}
+
+/* Responsive container */
+.container-eurovision {
+  @apply w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
 }

@@ -1,6 +1,7 @@
 <script>
 	import '../app.css';
-  import 'bootstrap/dist/css/bootstrap.min.css';
 </script>
 
-<slot />
+<div class="min-h-screen bg-gray-50">
+	<slot />
+</div>
