@@ -6,9 +6,6 @@
  */
 
 export const FANTASY_CONFIG = {
-	/** Number of participants each user picks in their fantasy team (deprecated - now calculated dynamically) */
-	TEAM_SIZE: 10,
-
 	/** Maximum number of picks one drafter can have (hard cap) */
 	MAX_PICKS_PER_DRAFTER: 5,
 
@@ -25,10 +22,10 @@ export const FANTASY_CONFIG = {
 	MIN_POSITION: 1,
 
 	/** Maximum position value (typically 26 for Eurovision final) */
-	MAX_POSITION: 26,
+	MAX_POSITION: 25,
 
 	/** Point multiplier for final contest points (currently not used, but kept for future) */
-	POINT_MULTIPLIER: 1,
+	POINT_MULTIPLIER: 1
 } as const;
 
 /**
@@ -68,7 +65,7 @@ export function calculateFantasyPoints(
 
 	// Calculate bonus points based on prediction accuracy
 	const bonusPoints = Math.max(
-		FANTASY_CONFIG.BASE_BONUS_POINTS - (predictionOffset * FANTASY_CONFIG.POSITION_BONUS_REDUCTION),
+		FANTASY_CONFIG.BASE_BONUS_POINTS - predictionOffset * FANTASY_CONFIG.POSITION_BONUS_REDUCTION,
 		0
 	);
 

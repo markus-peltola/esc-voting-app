@@ -134,12 +134,12 @@ export function calculateNextTurn(currentState: DraftState): TurnUpdate {
 		// Increment round
 		round++;
 
-		// PRESERVED LOGIC: If that was the last round, end the draft
+		// Keep the final visible draft state on the last completed round.
 		if (round > currentState.teamSize) {
 			return {
 				currentTurnIndex: nextTurnIndex,
-				round: round,
-				isForward: !currentDirection,
+				round: currentState.teamSize,
+				isForward: currentDirection,
 				draftClosed: true
 			};
 		}

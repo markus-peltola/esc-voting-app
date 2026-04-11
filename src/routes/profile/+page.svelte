@@ -111,13 +111,14 @@
 	async function changeUsername() {
 		error = '';
 		success = '';
+		const trimmedUsername = newUsername.trim();
 
-		if (!newUsername || newUsername.trim() === '') {
+		if (!trimmedUsername) {
 			error = 'Please enter a username';
 			return;
 		}
 
-		if (newUsername.length < 3) {
+		if (trimmedUsername.length < 3) {
 			error = 'Username must be at least 3 characters';
 			return;
 		}
@@ -129,23 +130,25 @@
 			const { data: existingUser } = await data.supabase
 				.from('profiles')
 				.select('id')
-				.eq('username', newUsername)
-				.single();
+				.eq('username', trimmedUsername)
+				.maybeSingle();
 
 			if (existingUser && existingUser.id !== data.session?.user.id) {
 				throw new Error('Username already taken');
 			}
 
-			// Update username
-			const { error: updateError } = await data.supabase
+			// Update username and sync the local auth store from the returned row.
+			const { data: updatedProfile, error: updateError } = await data.supabase
 				.from('profiles')
-				.update({ username: newUsername })
-				.eq('id', data.session!.user.id);
+				.update({ username: trimmedUsername })
+				.eq('id', data.session!.user.id)
+				.select('*')
+				.single();
 
 			if (updateError) throw updateError;
 
 			success = '✅ Username updated successfully!';
-			authStore.profile!.username = newUsername;
+			authStore.setAuth(authStore.session, updatedProfile);
 			editingUsername = false;
 			newUsername = '';
 		} catch (err: any) {

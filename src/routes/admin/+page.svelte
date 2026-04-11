@@ -368,19 +368,24 @@
 				.delete()
 				.eq('event_id', resultsEventId);
 
-			// Insert new results
-			const resultsData = resultsParticipants.map(p => ({
-				event_id: resultsEventId,
-				participant_id: p.id,
-				final_position: positions.get(p.id) || 0,
-				points: points.get(p.id) || 0
-			}));
+			// Insert only participants with an explicitly entered final position.
+			// Unset participants should remain absent from fantasy_results so the UI can show TBA.
+			const resultsData = resultsParticipants
+				.filter((p) => positions.has(p.id))
+				.map(p => ({
+					event_id: resultsEventId,
+					participant_id: p.id,
+					final_position: positions.get(p.id) ?? 0,
+					points: points.get(p.id) ?? 0
+				}));
 
-			const { error: insertError } = await data.supabase
-				.from('fantasy_results')
-				.insert(resultsData);
+			if (resultsData.length > 0) {
+				const { error: insertError } = await data.supabase
+					.from('fantasy_results')
+					.insert(resultsData);
 
-			if (insertError) throw insertError;
+				if (insertError) throw insertError;
+			}
 
 			success = 'Results saved successfully!';
 		} catch (err: any) {

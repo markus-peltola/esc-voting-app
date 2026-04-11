@@ -114,6 +114,18 @@
 		return sequence;
 	});
 
+	let visiblePickOrderSequence = $derived.by(() => {
+		if (!draftState || pickOrderSequence.length === 0) return [];
+
+		const previewPickCount = draftState.turn_order.length * 3;
+		const previewEndIndex = Math.min(previewPickCount - 1, pickOrderSequence.length - 1);
+		const lastVisibleRound = pickOrderSequence[previewEndIndex]?.round;
+
+		if (!lastVisibleRound) return pickOrderSequence;
+
+		return pickOrderSequence.filter((pick) => pick.round <= lastVisibleRound);
+	});
+
 	$effect(() => {
 		loadEvents();
 	});
@@ -126,11 +138,31 @@
 	});
 
 	async function loadEvents() {
+		const { data: draftData, error: draftError } = await data.supabase
+			.from('fantasy_drafts')
+			.select('event_id')
+			.neq('status', 'closed');
+
+		if (draftError) {
+			console.error('Error loading drafts:', draftError);
+			error = 'Failed to load drafts';
+			loading = false;
+			return;
+		}
+
+		const eventIds = [...new Set((draftData || []).map((draft) => draft.event_id))];
+
+		if (eventIds.length === 0) {
+			events = [];
+			loading = false;
+			return;
+		}
+
 		const { data: eventData, error: eventError } = await data.supabase
 			.from('events')
 			.select('*')
 			.eq('type', 'fantasy')
-			.eq('status', 'active')
+			.in('id', eventIds)
 			.order('year', { ascending: false });
 
 		if (eventError) {
@@ -205,7 +237,8 @@
 
 			participants = (participantData || [])
 				.map((item: any) => item.participant)
-				.filter((p: any) => !selectedIds.includes(p.id));
+				.filter((p: any) => !selectedIds.includes(p.id))
+				.sort((a: any, b: any) => a.country.localeCompare(b.country));
 
 			// Load all predictions with usernames
 			const { data: predictionsData, error: predictionsError } = await data.supabase
@@ -263,14 +296,14 @@
 		unsubscribe = subscribeToDraft(data.supabase, eventId, {
 			onPredictionInsert: async (payload) => {
 				console.log('New pick made!', payload);
+				const pickerUsername = userProfiles.get(payload.new.user_id) || 'Someone';
+
+				// Reload draft data for all clients so recent picks and pick order stay in sync.
+				await reloadDraftData(eventId);
 
 				// Show notification if someone else made a pick
 				if (payload.new.user_id !== data.session?.user.id) {
-					// Reload data to get updated state
-					await reloadDraftData(eventId);
-
-					// Show notification
-					realtimeNotification = `${currentTurnUsername} made a pick!`;
+					realtimeNotification = `${pickerUsername} made a pick!`;
 					setTimeout(() => {
 						realtimeNotification = null;
 					}, 3000);
@@ -349,7 +382,8 @@
 
 			participants = (participantData || [])
 				.map((item: any) => item.participant)
-				.filter((p: any) => !selectedIds.includes(p.id));
+				.filter((p: any) => !selectedIds.includes(p.id))
+				.sort((a: any, b: any) => a.country.localeCompare(b.country));
 
 			// Reload predictions
 			const { data: predictionsData } = await data.supabase
@@ -594,8 +628,8 @@
 						<div class="card-eurovision p-6">
 							<h3 class="text-lg font-bold text-gray-800 mb-3">Pick Order</h3>
 							<div class="flex flex-wrap gap-2">
-								{#each pickOrderSequence.slice(0, draftState.turn_order.length * 3) as pick, i}
-									{@const isNewRound = i > 0 && pick.round !== pickOrderSequence[i - 1].round}
+								{#each visiblePickOrderSequence as pick, i}
+									{@const isNewRound = i > 0 && pick.round !== visiblePickOrderSequence[i - 1].round}
 									{#if isNewRound}
 										<div class="w-full flex items-center gap-2 my-1">
 											<div class="h-px bg-gray-300 flex-1"></div>
@@ -700,20 +734,20 @@
 										<label for="position" class="block text-sm font-semibold text-gray-700 mb-2">
 											Predicted Final Position:
 										</label>
-										<input
-											id="position"
-											type="number"
-											bind:value={predictedPosition}
-											required
-											min="1"
-											max={totalParticipants}
-											disabled={submitting}
-											class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all disabled:opacity-50"
-											placeholder="1-{totalParticipants}"
-										/>
-										<p class="text-xs text-gray-500 mt-1">
-											Position 1 = Winner, {totalParticipants} = Last place, 0 = Did Not Qualify
-										</p>
+											<input
+												id="position"
+												type="number"
+												bind:value={predictedPosition}
+												required
+												min="1"
+												max={FANTASY_CONFIG.MAX_POSITION}
+												disabled={submitting}
+												class="w-full bg-white text-gray-900 caret-primary-600 placeholder:text-gray-400 px-4 py-3 border-2 border-gray-300 rounded-lg hover:text-gray-900 focus:text-gray-900 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all disabled:opacity-50"
+												placeholder="1-{FANTASY_CONFIG.MAX_POSITION}"
+											/>
+											<p class="text-xs text-gray-500 mt-1">
+												Position 1 = Winner, {FANTASY_CONFIG.MAX_POSITION} = Last place, 0 = Did Not Qualify
+											</p>
 									</div>
 
 									<button

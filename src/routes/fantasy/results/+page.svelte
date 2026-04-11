@@ -5,10 +5,10 @@
 	import { flags } from '$lib/flags';
 	import type { PageData } from './$types';
 
-	// Helper to get flag by country name
-	function getFlagByCountryName(countryName: string): string {
+	// Use country code for image flags because some platforms render flag emoji as plain letters.
+	function getFlagCodeByCountryName(countryName: string): string | null {
 		const entry = Object.values(flags).find(f => f.name === countryName);
-		return entry?.emoji || '🏳️';
+		return entry?.code.toLowerCase() || null;
 	}
 
 	let { data }: { data: PageData } = $props();
@@ -21,6 +21,19 @@
 	let leaderboard = $state<any[]>([]);
 	let userTeams = $state<Map<string, any[]>>(new Map());
 	let hasResults = $state(false); // Whether admin has entered any real results
+	let hasScoredLeaderboard = $derived(leaderboard.some((user) => user.total_points > 0));
+	let teamBreakdownOrder = $derived.by(() => {
+		if (hasScoredLeaderboard) return leaderboard;
+		if (!data.session?.user) return leaderboard;
+
+		const currentUserIndex = leaderboard.findIndex((user) => user.user_id === data.session?.user.id);
+		if (currentUserIndex <= 0) return leaderboard;
+
+		const reordered = [...leaderboard];
+		const [currentUser] = reordered.splice(currentUserIndex, 1);
+		reordered.unshift(currentUser);
+		return reordered;
+	});
 
 	$effect(() => {
 		loadEvents();
@@ -134,7 +147,7 @@
 					fantasy_points: fantasyPointsTotal,
 					has_result: hasResult,
 					pick_order: prediction.pick_order,
-					flag: getFlagByCountryName(prediction.participant.country)
+					flagCode: getFlagCodeByCountryName(prediction.participant.country)
 				});
 
 				// Add to user's total score
@@ -298,7 +311,7 @@
 					<!-- User Teams Breakdown -->
 					<div class="space-y-6">
 						<h2 class="text-2xl font-bold text-gray-800">Team Breakdowns</h2>
-						{#each leaderboard as user, userIndex}
+						{#each teamBreakdownOrder as user, userIndex}
 							{@const team = userTeams.get(user.user_id) || []}
 							<div class="card-eurovision p-6 animate-slide-up">
 								<div class="mb-4 pb-3 border-b border-gray-200 flex justify-between items-center">
@@ -343,8 +356,15 @@
 													</td>
 													<td class="py-3 px-3">
 														<div class="flex items-center gap-2">
-															<span class="text-xl">{pick.flag}</span>
-															<span class="font-medium text-gray-800">{pick.participant.country}</span>
+																{#if pick.flagCode}
+																	<img
+																		src={`https://flagcdn.com/24x18/${pick.flagCode}.png`}
+																		alt=""
+																		class="h-[18px] w-6 rounded-sm object-cover border border-gray-200"
+																		loading="lazy"
+																	/>
+																{/if}
+																<span class="font-medium text-gray-800">{pick.participant.country}</span>
 														</div>
 													</td>
 													<td class="py-3 px-3 text-gray-700">{pick.participant.artist}</td>
