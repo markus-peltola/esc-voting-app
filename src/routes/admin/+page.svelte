@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import Navigation from '$lib/components/layout/Navigation.svelte';
+	import { FANTASY_CONFIG } from '$lib/config/fantasy';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -266,8 +267,9 @@
 			}
 
 			// Calculate team size: each user can pick as many as possible
-			// Formula: floor(total_participants / total_users)
-			const teamSize = Math.floor(participantCount / selectedUserIds.length);
+			// Formula: min(floor(total_participants / total_users), MAX_PICKS_PER_DRAFTER)
+			const calculatedTeamSize = Math.floor(participantCount / selectedUserIds.length);
+			const teamSize = Math.min(calculatedTeamSize, FANTASY_CONFIG.MAX_PICKS_PER_DRAFTER);
 
 			if (teamSize < 1) {
 				throw new Error(`Not enough participants (${participantCount}) for ${selectedUserIds.length} users. Need at least ${selectedUserIds.length} participants.`);
@@ -290,7 +292,10 @@
 
 			if (insertError) throw insertError;
 
-			success = `✅ Draft initialized! Each user will pick ${teamSize} participants (${participantCount} total ÷ ${selectedUserIds.length} users = ${teamSize} picks each).`;
+			const capMessage = calculatedTeamSize > FANTASY_CONFIG.MAX_PICKS_PER_DRAFTER
+				? ` (capped at ${FANTASY_CONFIG.MAX_PICKS_PER_DRAFTER} max)`
+				: '';
+			success = `✅ Draft initialized! Each user will pick ${teamSize} participants${capMessage}.`;
 			await loadDraft(draftEventId);
 		} catch (err: any) {
 			error = err.message || 'Failed to initialize draft';

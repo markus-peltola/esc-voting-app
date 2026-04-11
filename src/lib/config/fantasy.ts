@@ -6,8 +6,11 @@
  */
 
 export const FANTASY_CONFIG = {
-	/** Number of participants each user picks in their fantasy team */
+	/** Number of participants each user picks in their fantasy team (deprecated - now calculated dynamically) */
 	TEAM_SIZE: 10,
+
+	/** Maximum number of picks one drafter can have (hard cap) */
+	MAX_PICKS_PER_DRAFTER: 5,
 
 	/** Base bonus points awarded for accurate position predictions */
 	BASE_BONUS_POINTS: 50,

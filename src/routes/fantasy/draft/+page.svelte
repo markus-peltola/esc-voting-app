@@ -55,6 +55,65 @@
 			: 'Unknown'
 	);
 
+	// Current user's picks sorted by predicted position, then alphabetically
+	let myPicks = $derived(
+		data.session?.user
+			? predictions
+					.filter((p) => p.user_id === data.session!.user.id)
+					.sort((a, b) => {
+						if (a.predicted_position !== b.predicted_position) {
+							return a.predicted_position - b.predicted_position;
+						}
+						return a.participant.country.localeCompare(b.participant.country);
+					})
+			: []
+	);
+
+	// Build the full pick sequence for the current round's remaining turns
+	let pickOrderSequence = $derived.by(() => {
+		if (!draftState || draftState.status !== 'open') return [];
+
+		const order = draftState.turn_order as string[];
+		const totalUsers = order.length;
+		const teamSize = draftState.team_size;
+		const sequence: { userId: string; username: string; round: number; isCurrent: boolean; isMe: boolean; isPast: boolean }[] = [];
+
+		let round = draftState.current_round;
+		let index = draftState.current_turn_index;
+		let forward = draftState.is_forward;
+		let isFirst = true;
+
+		// Build sequence from current position through remaining picks
+		while (round <= teamSize) {
+			const userId = order[index];
+			sequence.push({
+				userId,
+				username: userProfiles.get(userId) || '?',
+				round,
+				isCurrent: isFirst,
+				isMe: userId === data.session?.user.id,
+				isPast: false
+			});
+			isFirst = false;
+
+			// Calculate next position
+			const nextIndex = forward ? index + 1 : index - 1;
+			if (nextIndex >= totalUsers || nextIndex < 0) {
+				// End of round - snake reversal
+				round++;
+				forward = !forward;
+				// Same user starts next round
+			} else {
+				index = nextIndex;
+			}
+
+			// Safety limit
+			if (sequence.length > totalUsers * teamSize) break;
+		}
+
+		return sequence;
+	});
+
 	$effect(() => {
 		loadEvents();
 	});
@@ -413,25 +472,24 @@
 			});
 
 			// Update draft state
-			if (nextTurn.draftClosed) {
-				await data.supabase
-					.from('fantasy_drafts')
-					.update({
-						status: 'closed',
-						current_turn_index: nextTurn.currentTurnIndex,
-						current_round: nextTurn.round,
-						is_forward: nextTurn.isForward
-					})
-					.eq('event_id', selectedEventId);
-			} else {
-				await data.supabase
-					.from('fantasy_drafts')
-					.update({
-						current_turn_index: nextTurn.currentTurnIndex,
-						current_round: nextTurn.round,
-						is_forward: nextTurn.isForward
-					})
-					.eq('event_id', selectedEventId);
+			const updatePayload = {
+				current_turn_index: nextTurn.currentTurnIndex,
+				current_round: nextTurn.round,
+				is_forward: nextTurn.isForward,
+				...(nextTurn.draftClosed ? { status: 'closed' } : {})
+			};
+
+			const { error: updateError, data: updateData, count } = await data.supabase
+				.from('fantasy_drafts')
+				.update(updatePayload)
+				.eq('event_id', selectedEventId)
+				.select();
+
+			if (updateError) throw updateError;
+
+			// Supabase silently returns empty array if RLS blocks the update
+			if (!updateData || updateData.length === 0) {
+				throw new Error('Failed to update draft turn. You may not have permission to modify this draft. Ask an admin to check the database policies.');
 			}
 
 			// Reset form and reload
@@ -531,6 +589,43 @@
 						</div>
 					</div>
 
+					<!-- Pick Order Tracker -->
+					{#if draftState.status === 'open' && pickOrderSequence.length > 0}
+						<div class="card-eurovision p-6">
+							<h3 class="text-lg font-bold text-gray-800 mb-3">Pick Order</h3>
+							<div class="flex flex-wrap gap-2">
+								{#each pickOrderSequence.slice(0, draftState.turn_order.length * 3) as pick, i}
+									{@const isNewRound = i > 0 && pick.round !== pickOrderSequence[i - 1].round}
+									{#if isNewRound}
+										<div class="w-full flex items-center gap-2 my-1">
+											<div class="h-px bg-gray-300 flex-1"></div>
+											<span class="text-xs text-gray-400 font-semibold">Round {pick.round}</span>
+											<div class="h-px bg-gray-300 flex-1"></div>
+										</div>
+									{/if}
+									<div
+										class="px-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-1"
+										class:bg-accent-500={pick.isCurrent && pick.isMe}
+										class:text-white={pick.isCurrent}
+										class:animate-pulse-glow={pick.isCurrent && pick.isMe}
+										class:bg-primary-600={pick.isCurrent && !pick.isMe}
+										class:bg-purple-100={!pick.isCurrent && pick.isMe}
+										class:text-purple-700={!pick.isCurrent && pick.isMe}
+										class:border-2={!pick.isCurrent && pick.isMe}
+										class:border-purple-300={!pick.isCurrent && pick.isMe}
+										class:bg-gray-100={!pick.isCurrent && !pick.isMe}
+										class:text-gray-600={!pick.isCurrent && !pick.isMe}
+									>
+										{#if pick.isCurrent}
+											<span>▶</span>
+										{/if}
+										{pick.username}
+									</div>
+								{/each}
+							</div>
+						</div>
+					{/if}
+
 					<!-- Error Message -->
 					{#if error}
 						<div class="p-4 bg-danger-50 border-2 border-danger-200 text-danger-700 rounded-lg">
@@ -545,17 +640,15 @@
 						</div>
 					{/if}
 
-					<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+					<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 						<!-- Pick Form -->
 						{#if !isRegistered}
-							<!-- User is not in this draft -->
 							<div class="card-eurovision p-6 text-center">
 								<div class="text-4xl mb-3">🚫</div>
 								<h3 class="text-lg font-bold text-gray-800 mb-2">Not Participating</h3>
 								<p class="text-gray-600">You are not registered for this draft.</p>
 							</div>
 						{:else if draftState.status === 'pending'}
-							<!-- Draft hasn't started yet -->
 							<div class="card-eurovision p-6 text-center">
 								<div class="text-4xl mb-3">⏰</div>
 								<h3 class="text-lg font-bold text-gray-800 mb-2">Draft Not Started</h3>
@@ -567,7 +660,6 @@
 								{/if}
 							</div>
 						{:else if draftState.status === 'closed'}
-							<!-- Draft is complete -->
 							<div class="card-eurovision p-6 text-center">
 								<div class="text-4xl mb-3">🏁</div>
 								<h3 class="text-lg font-bold text-gray-800 mb-2">Draft Complete</h3>
@@ -577,7 +669,6 @@
 								</button>
 							</div>
 						{:else if draftState.status === 'open' && isMyTurn}
-							<!-- User's turn to pick -->
 							<div class="card-eurovision p-6">
 								<h3 class="text-lg font-bold text-gray-800 mb-4">Make Your Pick</h3>
 								<p class="text-sm text-gray-600 mb-4">
@@ -635,7 +726,6 @@
 								</form>
 							</div>
 						{:else}
-							<!-- Waiting for turn -->
 							<div class="card-eurovision p-6 text-center">
 								<div class="text-4xl mb-3">⏳</div>
 								<h3 class="text-lg font-bold text-gray-800 mb-2">Waiting for Your Turn</h3>
@@ -645,26 +735,69 @@
 							</div>
 						{/if}
 
+						<!-- My Team -->
+						{#if isRegistered && myPicks.length > 0}
+							<div class="card-eurovision p-6">
+								<h3 class="text-lg font-bold text-gray-800 mb-4">
+									My Team
+									<span class="text-sm font-normal text-gray-500">({myPicks.length} / {draftState.team_size})</span>
+								</h3>
+								<div class="space-y-2">
+									{#each myPicks as pick, i}
+										<div class="p-3 bg-purple-50 rounded-lg border border-purple-200 flex justify-between items-center">
+											<div class="flex items-center gap-3">
+												<span class="text-lg font-bold text-purple-600 w-6 text-center">
+													{i + 1}.
+												</span>
+												<div>
+													<p class="font-semibold text-gray-800">{pick.participant.country}</p>
+													<p class="text-sm text-gray-600">{pick.participant.artist} - {pick.participant.song}</p>
+												</div>
+											</div>
+											<span class="bg-purple-200 text-purple-800 px-2 py-1 rounded text-xs font-bold whitespace-nowrap">
+												#{pick.predicted_position}
+											</span>
+										</div>
+									{/each}
+								</div>
+							</div>
+						{/if}
+
 						<!-- Recent Picks -->
 						<div class="card-eurovision p-6">
 							<h3 class="text-lg font-bold text-gray-800 mb-4">Recent Picks</h3>
-							<div class="space-y-2 max-h-96 overflow-y-auto">
-								{#each predictions.slice().reverse().slice(0, 10) as prediction}
-									<div class="p-3 bg-gray-50 rounded-lg border border-gray-200">
-										<div class="flex justify-between items-start">
-											<div class="flex-1">
-												<p class="font-semibold text-gray-800">{prediction.username}</p>
-												<p class="text-sm text-gray-600">
-													{prediction.participant.country} - {prediction.participant.artist}
-												</p>
+							{#if predictions.length === 0}
+								<p class="text-gray-500 text-sm">No picks yet. The draft is waiting for its first pick!</p>
+							{:else}
+								<div class="space-y-2 max-h-96 overflow-y-auto">
+									{#each predictions.slice().reverse() as prediction}
+										<div
+											class="p-3 rounded-lg border"
+											class:bg-purple-50={prediction.user_id === data.session?.user.id}
+											class:border-purple-200={prediction.user_id === data.session?.user.id}
+											class:bg-gray-50={prediction.user_id !== data.session?.user.id}
+											class:border-gray-200={prediction.user_id !== data.session?.user.id}
+										>
+											<div class="flex justify-between items-start">
+												<div class="flex-1">
+													<p class="font-semibold text-gray-800">
+														{prediction.username}
+														{#if prediction.user_id === data.session?.user.id}
+															<span class="text-xs text-purple-600">(you)</span>
+														{/if}
+													</p>
+													<p class="text-sm text-gray-600">
+														{prediction.participant.country} - {prediction.participant.artist}
+													</p>
+												</div>
+												<span class="bg-primary-100 text-primary-700 px-2 py-1 rounded text-xs font-semibold">
+													#{prediction.predicted_position}
+												</span>
 											</div>
-											<span class="bg-primary-100 text-primary-700 px-2 py-1 rounded text-xs font-semibold">
-												Pos {prediction.predicted_position}
-											</span>
 										</div>
-									</div>
-								{/each}
-							</div>
+									{/each}
+								</div>
+							{/if}
 						</div>
 					</div>
 				</div>
