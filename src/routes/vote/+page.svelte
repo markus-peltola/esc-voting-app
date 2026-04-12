@@ -1,8 +1,18 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import Navigation from '$lib/components/layout/Navigation.svelte';
 	import { validateVotes, getAvailableParticipants } from '$lib/utils/vote-validation';
 	import { VOTING_CONFIG } from '$lib/config/voting';
+	import { authStore } from '$lib/stores/auth.svelte';
+	import {
+		ensureGuestToken,
+		getOrCreateAuthVotingIdentity,
+		getOrCreateGuestVotingIdentity,
+		getStoredGuestName,
+		resolveGuestVotingIdentity,
+		type VotingIdentity
+	} from '$lib/voting-identity';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -16,13 +26,20 @@
 	let loading = $state(false);
 	let error = $state('');
 	let success = $state('');
+	let guestDisplayName = $state('');
+	let currentVoter = $state<VotingIdentity | null>(null);
 
 	// Derived state
 	let isFormValid = $derived(votes.every((v) => v !== ''));
+	let isGuestVoting = $derived(!data.session?.user);
 
 	// Load active events on mount
 	$effect(() => {
 		loadEvents();
+	});
+
+	onMount(async () => {
+		await syncVotingIdentity();
 	});
 
 	// Auto-select event if there's only one
@@ -92,13 +109,38 @@
 		loading = false;
 	}
 
+	async function syncVotingIdentity() {
+		error = '';
+
+		try {
+			if (data.session?.user) {
+				currentVoter = await getOrCreateAuthVotingIdentity(
+					data.supabase as any,
+					data.session.user.id,
+					authStore.username || data.profile?.username || 'Account voter'
+				);
+				return;
+			}
+
+			guestDisplayName = getStoredGuestName();
+			currentVoter = await resolveGuestVotingIdentity(data.supabase as any);
+
+			if (currentVoter?.isGuest) {
+				guestDisplayName = currentVoter.displayName;
+			}
+		} catch (err: any) {
+			console.error('Error resolving voting identity:', err);
+			error = err.message || 'Failed to load your voting profile';
+		}
+	}
+
 	async function handleSubmit(e: SubmitEvent) {
 		e.preventDefault();
 		error = '';
 		success = '';
 
-		if (!selectedEventId || !data.session?.user) {
-			error = 'You must be logged in and select an event';
+		if (!selectedEventId) {
+			error = 'Please select an event';
 			return;
 		}
 
@@ -112,31 +154,57 @@
 		loading = true;
 
 		try {
-			// Delete previous votes for this event
-			const { error: deleteError } = await data.supabase
-				.from('votes')
-				.delete()
-				.eq('user_id', data.session.user.id)
-				.eq('event_id', selectedEventId);
+			const voter = data.session?.user
+				? await getOrCreateAuthVotingIdentity(
+						data.supabase as any,
+						data.session.user.id,
+						authStore.username || data.profile?.username || 'Account voter'
+				  )
+				: await getOrCreateGuestVotingIdentity(data.supabase as any, guestDisplayName);
 
-			if (deleteError) {
-				throw deleteError;
-			}
+			currentVoter = voter;
 
-			// Insert new votes with points
 			const votesPayload = votes.map((participantId, index) => ({
-				user_id: data.session.user.id,
-				event_id: selectedEventId,
 				participant_id: participantId,
 				points: VOTING_CONFIG.POINTS[index]
 			}));
 
-			const { error: insertError } = await data.supabase
-				.from('votes')
-				.insert(votesPayload);
+			if (voter.isGuest) {
+				const { error: submitError } = await (data.supabase as any).rpc('submit_guest_votes', {
+					p_guest_token: ensureGuestToken(),
+					p_display_name: guestDisplayName.trim(),
+					p_event_id: selectedEventId,
+					p_votes: votesPayload
+				});
 
-			if (insertError) {
-				throw insertError;
+				if (submitError) throw submitError;
+			} else {
+				// Delete previous votes for this event
+				const { error: deleteError } = await data.supabase
+					.from('votes')
+					.delete()
+					.eq('voter_id', voter.id)
+					.eq('event_id', selectedEventId);
+
+				if (deleteError) {
+					throw deleteError;
+				}
+
+				// Insert new votes with points
+				const authVotesPayload = votesPayload.map((vote) => ({
+					voter_id: voter.id,
+					event_id: selectedEventId,
+					participant_id: vote.participant_id,
+					points: vote.points
+				}));
+
+				const { error: insertError } = await data.supabase
+					.from('votes')
+					.insert(authVotesPayload);
+
+				if (insertError) {
+					throw insertError;
+				}
 			}
 
 			success = '✅ Votes submitted successfully!';
@@ -200,6 +268,19 @@
 						</p>
 					</div>
 
+					{#if currentVoter}
+						<div class="mb-6 p-4 bg-primary-50 border-2 border-primary-200 rounded-lg">
+							<p class="text-sm font-semibold text-primary-800">
+								Voting as {currentVoter.displayName}
+								{#if currentVoter.isGuest}
+									<span class="font-normal text-primary-700">(guest)</span>
+								{:else}
+									<span class="font-normal text-primary-700">(account)</span>
+								{/if}
+							</p>
+						</div>
+					{/if}
+
 					<!-- Error/Success Messages -->
 					{#if error}
 						<div class="mb-6 p-4 bg-danger-50 border-2 border-danger-200 text-danger-700 rounded-lg animate-slide-up">
@@ -214,6 +295,26 @@
 					{/if}
 
 					<form onsubmit={handleSubmit} class="space-y-4">
+						{#if isGuestVoting}
+							<div class="mb-2">
+								<label for="guest-display-name" class="block text-sm font-semibold text-gray-700 mb-2">
+									Voting Nickname
+								</label>
+								<input
+									id="guest-display-name"
+									type="text"
+									bind:value={guestDisplayName}
+									required
+									disabled={loading}
+									class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+									placeholder="Give yourself a voting nickname"
+								/>
+								<p class="mt-1 text-xs text-gray-500">
+									This nickname can be changed later. Your device token keeps track of your guest ballot.
+								</p>
+							</div>
+						{/if}
+
 						{#each votes as vote, index}
 							<div class="flex items-center gap-4">
 								<!-- Position Badge -->
@@ -255,7 +356,7 @@
 								onclick={() => goto('/my-votes')}
 								class="btn-primary"
 							>
-								View My Votes
+								View Your Votes
 							</button>
 						</div>
 					</form>

@@ -114,6 +114,15 @@
 			>
 				Create a new account
 			</a>
+
+			<div class="mt-4 text-center">
+				<a
+					href="/vote?guest=1"
+					class="text-gray-600 hover:text-gray-900 font-medium transition-colors"
+				>
+					Let me just vote without creating an account
+				</a>
+			</div>
 		</div>
 
 		<!-- Footer Note -->

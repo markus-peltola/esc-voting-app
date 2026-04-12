@@ -1,6 +1,13 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import Navigation from '$lib/components/layout/Navigation.svelte';
+	import { authStore } from '$lib/stores/auth.svelte';
+	import {
+		getOrCreateAuthVotingIdentity,
+		resolveGuestVotingIdentity,
+		type VotingIdentity
+	} from '$lib/voting-identity';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -9,19 +16,34 @@
 	let error = $state('');
 	let votesByEvent = $state<Map<string, any[]>>(new Map());
 	let events = $state<Map<string, any>>(new Map());
+	let currentVoter = $state<VotingIdentity | null>(null);
 
-	$effect(() => {
-		loadVotes();
+	onMount(async () => {
+		await loadVotes();
 	});
 
 	async function loadVotes() {
-		if (!data.session?.user) {
-			error = 'You must be logged in';
-			loading = false;
-			return;
-		}
-
 		try {
+			loading = true;
+			error = '';
+
+			if (data.session?.user) {
+				currentVoter = await getOrCreateAuthVotingIdentity(
+					data.supabase as any,
+					data.session.user.id,
+					authStore.username || data.profile?.username || 'Account voter'
+				);
+			} else {
+				currentVoter = await resolveGuestVotingIdentity(data.supabase as any);
+			}
+
+			if (!currentVoter) {
+				votesByEvent = new Map();
+				events = new Map();
+				loading = false;
+				return;
+			}
+
 			// Load all votes for current user with participant and event details
 			const { data: votesData, error: votesError } = await data.supabase
 				.from('votes')
@@ -41,7 +63,7 @@
 						song
 					)
 				`)
-				.eq('user_id', data.session.user.id)
+				.eq('voter_id', currentVoter.id)
 				.order('created_at', { ascending: false });
 
 			if (votesError) throw votesError;
@@ -108,7 +130,13 @@
 			<div class="card-eurovision p-8 text-center">
 				<div class="text-6xl mb-4">🎤</div>
 				<h2 class="text-2xl font-bold text-gray-800 mb-2">No Votes Yet</h2>
-				<p class="text-gray-600 mb-6">You haven't cast any votes yet. Head to the voting page to participate!</p>
+				<p class="text-gray-600 mb-6">
+					{#if currentVoter}
+						{currentVoter.displayName} hasn't cast any votes yet. Head to the voting page to participate!
+					{:else}
+						No voting profile was found on this device. Head to the voting page to start a ballot.
+					{/if}
+				</p>
 				<button onclick={() => goto('/vote')} class="btn-accent">
 					🎵 Start Voting
 				</button>

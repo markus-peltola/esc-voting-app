@@ -6,10 +6,9 @@
 	import { flags } from '$lib/flags';
 	import type { PageData } from './$types';
 
-	// Helper to get flag by country name
-	function getFlagByCountryName(countryName: string): string {
+	function getFlagCodeByCountryName(countryName: string): string | null {
 		const entry = Object.values(flags).find(f => f.name === countryName);
-		return entry?.emoji || '🏳️';
+		return entry?.code.toLowerCase() || null;
 	}
 
 	let { data }: { data: PageData } = $props();
@@ -39,6 +38,7 @@
 			.from('events')
 			.select('*')
 			.eq('type', 'voting')
+			.eq('status', 'closed')
 			.order('year', { ascending: false });
 
 		if (eventError) {
@@ -90,7 +90,7 @@
 				country: item.participant.country,
 				artist: item.participant.artist,
 				song: item.participant.song,
-				flag: getFlagByCountryName(item.participant.country)
+				flagCode: getFlagCodeByCountryName(item.participant.country)
 			}));
 
 			// Use our preserved aggregation logic
@@ -157,8 +157,8 @@
 			<!-- No Events -->
 			<div class="card-eurovision p-8 text-center">
 				<div class="text-6xl mb-4">📊</div>
-				<h2 class="text-2xl font-bold text-gray-800 mb-2">No Events Yet</h2>
-				<p class="text-gray-600">No voting events have been created yet.</p>
+				<h2 class="text-2xl font-bold text-gray-800 mb-2">No Results Available Yet</h2>
+				<p class="text-gray-600">Results will appear here once a voting event has been closed.</p>
 			</div>
 		{:else}
 			<!-- Only show event selection if there are multiple events -->
@@ -259,16 +259,23 @@
 										</td>
 
 										<!-- Country -->
-										<td class="py-4 px-4">
-											{#if isHidden(index)}
-												<span class="text-2xl">❓</span>
-											{:else}
-												<div class="flex items-center gap-2">
-													<span class="text-2xl">{result.flag}</span>
-													<span class="font-semibold text-gray-800">{result.country}</span>
-												</div>
-											{/if}
-										</td>
+											<td class="py-4 px-4">
+												{#if isHidden(index)}
+													<span class="text-2xl">❓</span>
+												{:else}
+													<div class="flex items-center gap-2">
+														{#if result.flagCode}
+															<img
+																src={`https://flagcdn.com/24x18/${result.flagCode}.png`}
+																alt=""
+																class="h-[18px] w-6 rounded-sm object-cover border border-gray-200"
+																loading="lazy"
+															/>
+														{/if}
+														<span class="font-semibold text-gray-800">{result.country}</span>
+													</div>
+												{/if}
+											</td>
 
 										<!-- Artist -->
 										<td class="py-4 px-4 text-gray-700">

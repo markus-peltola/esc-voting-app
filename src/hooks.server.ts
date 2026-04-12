@@ -80,7 +80,7 @@ const authGuard: Handle = async ({ event, resolve }) => {
 	/**
 	 * Define protected routes that require authentication
 	 */
-	const protectedRoutes = ['/vote', '/my-votes', '/fantasy', '/profile'];
+	const protectedRoutes = ['/fantasy', '/profile'];
 	const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
 
 	/**
