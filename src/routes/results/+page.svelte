@@ -144,7 +144,12 @@
 </script>
 
 <div class="min-h-screen bg-gray-50">
-	<Navigation supabase={data.supabase} currentPage="results" />
+	<Navigation
+		supabase={data.supabase}
+		currentPage="results"
+		initialSession={data.session}
+		initialProfile={data.profile}
+	/>
 
 	<main class="container-eurovision py-8">
 		{#if loading && events.length === 0}

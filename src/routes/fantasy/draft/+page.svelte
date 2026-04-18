@@ -540,7 +540,12 @@
 </script>
 
 <div class="min-h-screen bg-gray-50">
-	<Navigation supabase={data.supabase} currentPage="fantasy-draft" />
+	<Navigation
+		supabase={data.supabase}
+		currentPage="fantasy-draft"
+		initialSession={data.session}
+		initialProfile={data.profile}
+	/>
 
 	<!-- Real-time Notification Toast -->
 	{#if realtimeNotification}

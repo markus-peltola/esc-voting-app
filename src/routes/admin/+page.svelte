@@ -487,7 +487,12 @@
 </script>
 
 <div class="min-h-screen bg-gray-50">
-	<Navigation supabase={data.supabase} currentPage="admin" />
+	<Navigation
+		supabase={data.supabase}
+		currentPage="admin"
+		initialSession={data.session}
+		initialProfile={data.profile}
+	/>
 
 	<main class="container-eurovision py-8">
 		<!-- Tabs -->

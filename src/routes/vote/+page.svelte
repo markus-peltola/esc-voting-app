@@ -225,7 +225,12 @@
 </script>
 
 <div class="min-h-screen bg-gray-50">
-	<Navigation supabase={data.supabase} currentPage="vote" />
+	<Navigation
+		supabase={data.supabase}
+		currentPage="vote"
+		initialSession={data.session}
+		initialProfile={data.profile}
+	/>
 
 	<main class="container-eurovision py-8">
 		<!-- Event Selection -->
@@ -316,12 +321,12 @@
 						{/if}
 
 						{#each votes as vote, index}
-							<div class="flex items-center gap-4">
+							<div class="flex items-center gap-3 md:gap-4 min-w-0">
 								<!-- Position Badge -->
-								<div class="flex-shrink-0 w-16">
-									<div class="bg-gradient-to-r from-accent-500 to-accent-600 text-white rounded-lg py-2 px-3 text-center">
+								<div class="flex-shrink-0 w-14 md:w-16">
+									<div class="bg-gradient-to-r from-accent-500 to-accent-600 text-white rounded-lg py-2 px-2 md:px-3 text-center">
 										<div class="text-xs font-semibold">#{index + 1}</div>
-										<div class="text-lg font-bold">{VOTING_CONFIG.POINTS[index]}pts</div>
+										<div class="text-base md:text-lg font-bold">{VOTING_CONFIG.POINTS[index]}pts</div>
 									</div>
 								</div>
 
@@ -330,7 +335,7 @@
 									bind:value={votes[index]}
 									required
 									disabled={loading}
-									class="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+									class="flex-1 w-full min-w-0 px-3 md:px-4 py-3 text-sm md:text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
 								>
 									<option value="">Select a song...</option>
 									{#each getAvailableOptions(index) as participant}

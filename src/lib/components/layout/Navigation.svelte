@@ -1,13 +1,19 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import type { SupabaseClient } from '@supabase/supabase-js';
 
-	let { supabase, currentPage = 'vote' }: { supabase: SupabaseClient; currentPage?: string } = $props();
+	let {
+		supabase,
+		currentPage = 'vote'
+	}: {
+		supabase: SupabaseClient;
+		currentPage?: string;
+	} = $props();
 
 	async function handleLogout() {
 		await supabase.auth.signOut();
-		goto('/login');
+		authStore.clear();
+		window.location.assign('/login');
 	}
 </script>
 
@@ -28,7 +34,7 @@
 			</div>
 			<nav class="flex flex-wrap gap-3 items-center text-sm">
 				<button
-					onclick={() => goto('/vote')}
+					onclick={() => window.location.assign('/vote')}
 					class="font-semibold transition-colors"
 					class:text-primary-700={currentPage === 'vote'}
 					class:text-primary-600={currentPage !== 'vote'}
@@ -37,7 +43,7 @@
 					🏠 Home
 				</button>
 				<button
-					onclick={() => goto('/my-votes')}
+					onclick={() => window.location.assign('/my-votes')}
 					class="font-semibold transition-colors"
 					class:text-primary-700={currentPage === 'my-votes'}
 					class:text-primary-600={currentPage !== 'my-votes'}
@@ -46,7 +52,7 @@
 					Your Votes
 				</button>
 				<button
-					onclick={() => goto('/results')}
+					onclick={() => window.location.assign('/results')}
 					class="font-semibold transition-colors"
 					class:text-primary-700={currentPage === 'results'}
 					class:text-primary-600={currentPage !== 'results'}
@@ -54,10 +60,10 @@
 				>
 					Results
 				</button>
-				{#if authStore.username}
+				{#if authStore.isAuthenticated}
 					<span class="text-gray-300 hidden md:inline">|</span>
 					<button
-						onclick={() => goto('/fantasy/draft')}
+						onclick={() => window.location.assign('/fantasy/draft')}
 						class="font-semibold transition-colors"
 						class:text-purple-700={currentPage === 'fantasy-draft'}
 						class:text-purple-600={currentPage !== 'fantasy-draft'}
@@ -66,7 +72,7 @@
 						Fantasy Draft
 					</button>
 					<button
-						onclick={() => goto('/fantasy/results')}
+						onclick={() => window.location.assign('/fantasy/results')}
 						class="font-semibold transition-colors"
 						class:text-purple-700={currentPage === 'fantasy-results'}
 						class:text-purple-600={currentPage !== 'fantasy-results'}
@@ -77,7 +83,7 @@
 					{#if authStore.isAdmin}
 						<span class="text-gray-300 hidden md:inline">|</span>
 						<button
-							onclick={() => goto('/admin')}
+							onclick={() => window.location.assign('/admin')}
 							class="font-semibold transition-colors"
 							class:text-danger-700={currentPage === 'admin'}
 							class:text-danger-600={currentPage !== 'admin'}
@@ -88,7 +94,7 @@
 					{/if}
 					<span class="text-gray-300 hidden md:inline">|</span>
 					<button
-						onclick={() => goto('/profile')}
+						onclick={() => window.location.assign('/profile')}
 						class="font-semibold transition-colors"
 						class:text-gray-700={currentPage === 'profile'}
 						class:text-gray-600={currentPage !== 'profile'}
@@ -96,12 +102,19 @@
 					>
 						👤 Profile
 					</button>
-					<button onclick={handleLogout} class="text-gray-600 hover:text-gray-900 transition-colors">
+					<button
+						type="button"
+						onclick={handleLogout}
+						class="text-gray-600 hover:text-gray-900 transition-colors"
+					>
 						Sign Out
 					</button>
 				{:else}
 					<span class="text-gray-300 hidden md:inline">|</span>
-					<button onclick={() => goto('/login')} class="text-gray-600 hover:text-gray-900 transition-colors">
+					<button
+						onclick={() => window.location.assign('/login')}
+						class="text-gray-600 hover:text-gray-900 transition-colors"
+					>
 						Log In
 					</button>
 				{/if}

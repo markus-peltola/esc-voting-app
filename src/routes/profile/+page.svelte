@@ -160,7 +160,12 @@
 </script>
 
 <div class="min-h-screen bg-gray-50">
-	<Navigation supabase={data.supabase} currentPage="profile" />
+	<Navigation
+		supabase={data.supabase}
+		currentPage="profile"
+		initialSession={data.session}
+		initialProfile={data.profile}
+	/>
 
 	<main class="container-eurovision py-8">
 		<div class="max-w-4xl mx-auto space-y-6">
