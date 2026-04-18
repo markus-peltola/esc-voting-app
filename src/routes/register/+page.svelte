@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { authStore } from '$lib/stores/auth.svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -11,6 +12,28 @@
 	let error = $state('');
 	let success = $state('');
 	let loading = $state(false);
+
+	type Profile = NonNullable<App.PageData['profile']>;
+
+	async function loadProfile(userId: string) {
+		const profileClient = data.supabase as typeof data.supabase & {
+			from(relation: 'profiles'): {
+				select(columns: '*'): {
+					eq(column: 'id', value: string): {
+						maybeSingle(): Promise<{ data: Profile | null }>;
+					};
+				};
+			};
+		};
+
+		const { data: profile } = await profileClient
+			.from('profiles')
+			.select('*')
+			.eq('id', userId)
+			.maybeSingle();
+
+		return profile;
+	}
 
 	async function handleRegister(e: SubmitEvent) {
 		e.preventDefault();
@@ -70,8 +93,10 @@
 			if (authData.user) {
 				// Check if email confirmation is required
 				if (authData.session) {
-					// No email confirmation required, redirect to vote
-					goto('/vote');
+					const profile = await loadProfile(authData.session.user.id);
+					authStore.setAuth(authData.session, profile);
+					window.location.assign('/vote');
+					return;
 				} else {
 					// Email confirmation required
 					success = 'Account created! Please check your email to verify your account.';

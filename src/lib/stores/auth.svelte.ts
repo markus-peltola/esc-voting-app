@@ -5,9 +5,8 @@
  */
 
 import type { User, Session } from '@supabase/supabase-js';
-import type { Database } from '$lib/database.types';
 
-type Profile = Database['public']['Tables']['profiles']['Row'];
+type Profile = NonNullable<App.PageData['profile']>;
 
 class AuthStore {
 	user = $state<User | null>(null);
